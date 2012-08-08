@@ -1,0 +1,9 @@
+<?php
+$accepted_list = array(
+	'articles',
+	'article',
+	'uploader',
+	'video',
+	'users'
+);
+?>

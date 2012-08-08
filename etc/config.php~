@@ -1,0 +1,14 @@
+<?php
+class Sconfig {
+	public $db_server = "localhost";
+	public $db_login = "root";
+	public $db_password = "q24u12e19rt94i";
+	public $db = "ryzhkova";
+	public $sitename = "Школа красоты";
+	public $sitedesc = "Раздел для клиентов";
+	public $theme = "theme";
+	public $main_page = "articles_list";
+	public $admin_main_page = "articles";
+	public $uploads_directory = "uploads";
+}
+?>

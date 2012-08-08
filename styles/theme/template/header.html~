@@ -1,0 +1,16 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<title>{var=`title`} | Healthy Joy в Железнодорожном</title>
+		<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+		<link rel="stylesheet" type="text/css" href="styles/theme/stylesheets/style.css" />
+	</head>
+	<body>
+		<div id="header" name="header">
+			<a href="/"><img src="styles/theme/img/logo.png" /></a>
+		</div>
+		<div id="margin" name="margin"><div id="menu" name="menu">
+			{array=`menulinks`}<a class="menulink" href="?id=block&block={id}">{name}</a><br />
+			{/array=`menulinks`}
+		</div>
+		<div id="content" name="content">

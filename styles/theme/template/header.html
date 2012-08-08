@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<title>{var=`title`} | {var=`sitename`} - {var=`sitedesc`}</title>
+		<link rel="stylesheet" type="text/css" href="styles/theme/stylesheets/styles.css" />
+		<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+		<script src="./styles/theme/js/jquery.js"></script>
+		<script src="./styles/theme/js/jquery.hints.js"></script>
+	</head>
+	<body>
+		<div id="header" name="header">
+			<a href="./" title="На главную">{var=`sitename`}</a><br />
+			<div id="logo_desc" name="logo_desc">{var=`sitedesc`}</div>
+		</div>
+		<div id="middle" name="middle">
+			<div id="menu" name="menu">
+				{include=`userdata`}
+			</div>
+			<div id="content" name="content">

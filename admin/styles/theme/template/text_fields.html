@@ -1,0 +1,21 @@
+<script type="text/javascript" language="javascript" src="./admin/styles/theme/js/articles.js"></script>
+<button id="showaddform" name="showaddform">Добавить статью</button>
+<div><form id="add" name="add" hidden="hidden" action="?wd=admin&id=article&action=add">
+	Заголовок: <input type="text" id="name" name="name" style="border: 1px solid" /><br />
+	Текст:<br />
+	<textarea id="text" name="text" style="height: 100px"></textarea><br />
+	<input type="submit" value="Добавить" />&nbsp;<input type="reset" value="Отмена" />
+</form></div>
+{case=`entries!=empty`}{array=`entries`}
+<div class="entry" id="{id}" name="{id}">
+	<div class="header">
+		<div class="name">{name}</div>
+		<div class="acts">
+			<button class="reduct">Редактировать</button><br />
+			<button class="remove">Удалить</button>
+		</div>
+	</div>
+	<div class="text" hidden="hidden"></div>
+</div>
+{/array=`entries`}{/case=`entries!=empty`}
+{case=`entries==empty`}<div class="error">Статей нет</div>{/case=`entries==empty`}
