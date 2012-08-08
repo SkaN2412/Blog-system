@@ -15,7 +15,45 @@ class User
      */
     public static function register($login, $password, $email)
     {
-
+        // Connect to DB
+        $DBH = db_connect();
+        
+        // Check login given for existing
+        $stmt = $DBH->prepare("SELECT `login` FROM `users` WHERE `login` = :login");
+        $stmt->bindParam("login", $login);
+        $stmt->execute();
+        if ( $stmt->rowCount() > 0 )
+        {
+            throw new inviException(1, "This login is already registered");
+        }
+        
+        // Check email given for existing
+        $stmt = $DBH->prepare("SELECT `email` FROM `users` WHERE `email` = :email");
+        $stmt->bindParam('email', $email);
+        $stmt->execute();
+        if ( $stmt->rowCount() > 0 )
+        {
+            throw new inviException(2, "This email is already used");
+        }
+        
+        // All is right, user with data given does not exist. Now generate password hash with Bcrypt class
+        $crypt = new Bcrypt(15);
+        $hash = $crypt->hash($password);
+        
+        // And now insert data into DB
+        $stmt = $DBH->prepare("INSERT INTO `users` (`login`, `password`, `email`) VALUES (:login, :password, :email)");
+        $stmtParams = array(
+            'login' => $login,
+            'password' => $hash,
+            'email' => $email
+        );
+        if ( ! $stmt->execute( $stmtParams ) )
+        {
+            throw new inviException(3, "MySQL error: {$stmt->errorInfo()}");
+        }
+        
+        // Now authorize user
+        self::authorize($login, $password);
     }
    /*
     * user_authorize() checks password correctness and authorize user. Information about user you can get with get($what) method of this class
