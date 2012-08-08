@@ -19,10 +19,7 @@ class User
         $DBH = db_connect();
         
         // Check login given for existing
-        $stmt = $DBH->prepare("SELECT `login` FROM `users` WHERE `login` = :login");
-        $stmt->bindParam("login", $login);
-        $stmt->execute();
-        if ( $stmt->rowCount() > 0 )
+        if ( self::isRegistered($login) )
         {
             throw new inviException(1, "This login is already registered");
         }
@@ -96,11 +93,23 @@ class User
         return TRUE;
     }
     /*
-     * Method get() returns data of user. If you call it without parameters, it will return all user's data in array. Or you can call it with parameter "what to return". You can get login, email or group. If you call this method, while user is not authorized, it will throw exception
+     * Method get() returns data of user. It requires login and returns array with data.
      */
-    public static function get($what)
+    public static function get($login)
     {
+        // Connect to DB
+        $DBH = db_connect();
         
+        // Select data
+        $stmt = $DBH->prepare("SELECT `email`, `group`, `blocked_until` FROM `users` WHERE `login` = :login");
+        $stmt->execute( array( 'login' => $login ) );
+        // If nothing is returned, throw exception
+        if ( ! $stmt->rowCount() < 1 )
+        {
+            throw new inviException(4, "Login is not registered");
+        }
+        $stmt->setFetchMode(PDO::FETCH_ASSOC);
+        return $stmt->fetch();
     }
     /*
      * user_editData() editing data of user. It requires old password to change other data. If password given isn't correct, exception will be thrown
@@ -122,6 +131,24 @@ class User
     public static function changeLostPassword($key, $newPassword)
     {
 
+    }
+    /*
+     * This private method is needed for checking user registered
+     */
+    private static function isRegistered($login)
+    {
+        // Connect to DB
+        $DBH = db_connect();
+        
+        // Select entry with this login
+        $stmt = $DBH->prepare("SELECT `login` FROM `users` WHERE `login` = :login");
+        $stmt->execute( array( 'login' => $login ) );
+        if ( $stmt->rowCount() < 1 )
+        {
+            return FALSE;
+        } else {
+            return TRUE;
+        }
     }
 }
 ?>
