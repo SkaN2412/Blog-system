@@ -11,7 +11,7 @@ class User
     protected static $group;
     protected static $blocked_until = NULL;
     /*
-     * function user_register() adds user to DB and euthorizes him
+     * function register() adds user to DB and euthorizes him
      */
     public static function register($login, $password, $email)
     {
@@ -53,7 +53,7 @@ class User
         self::authorize($login, $password);
     }
    /*
-    * user_authorize() checks password correctness and authorize user. Information about user you can get with get($what) method of this class
+    * authorize() checks password correctness and authorize user. Information about user you can get with get($what) method of this class
     */
     public static function authorize($login, $password)
     {
@@ -112,14 +112,44 @@ class User
         return $stmt->fetch();
     }
     /*
-     * user_editData() editing data of user. It requires old password to change other data. If password given isn't correct, exception will be thrown
+     * changePassword() requires old password and new password. User must be authorized - login will be taken from auth-data. 
      */
-    public static function edit($password, $login, $email, $newPassword)
+    public static function chandePassword($password, $newPassword)
     {
-
+        // Connect to DB
+        $DBH = db_connect();
+        
+        // Take login from class property
+        $login = self::$login;
+        
+        // Check, is the old password correct
+        $stmt = $DBH->prepare("SELECT `password` FROM `users` WHERE `login` = :login");
+        $stmt->execute( array( 'login' => $login ) );
+        $stmt->setFetchMode(PDO::FETCH_ASSOC);
+        $checkPassword = $stmt->fetch();
+        
+        // Check password correctness
+        $crypt = new Bcrypt(15);
+        if ( $crypt->hash($password) != $checkPassword['password'] )
+        {
+            throw new inviException(5, "Incorrect password");
+        }
+        
+        // Update password in DB
+        $stmt = $DBH->prepare("UPDATE `users` SET `password` = :password WHERE `login` = :login");
+        $stmtParams = array(
+            'password' => $crypt->hash($newPassword),
+            'login' => $login
+        );
+        $stmt->execute( $stmtParams );
+        if ( $stmt->rowCount() < 1 )
+        {
+            throw new inviException(6, "Unknown error, nothing is changed");
+        }
+        return TRUE;
     }
     /*
-     * user_generateRecoveryKey() returns key, that must be given for change password
+     * generateRecoveryKey() returns key, that must be given for change password
      */
     public static function generateRecoveryKey($login)
     {
@@ -149,6 +179,13 @@ class User
         } else {
             return TRUE;
         }
+    }
+    /*
+     * Method is required for registering user and changing user's email
+     */
+    private static function verifyEmail($email)
+    {
+        // Пока обойдемся без этого, сделаю подтверждение почты в бета-версии
     }
 }
 ?>
