@@ -8,14 +8,31 @@
  */
 function callback_send($name, $email, $text)
 {
-    
-}
+    try {
+        // Initialize templater
+        $templater = new inviTemplater(config_get("system->templatesDir"));
 
-/*
- * callback_emailSend() function sends email with text given onto email from configs
- */
-function callback_emailSend($text)
-{
+        // Load mail template
+        $templater->load("callback_text");
+        
+        // Prepare array with variables
+        $vars = array(
+            'name' => $name,
+            'email' => $email,
+            'text' => $text
+        );
+        
+        // Parse template with variables
+        $mailText = $templater->parse($vars);
+    } catch ( inviException $e ) {}
     
+    $adminEmail = config_get("admin->email");
+    $siteName = config_get("site_data->name");
+    
+    $headers = "From: {$email}\r\n";
+    $headers .= "Reply-To: {$email}\r\n";
+    
+    // Send email
+    return mail($adminEmail, "Обратная свзяь сайта {$siteName}", $mailText, $headers);
 }
 ?>

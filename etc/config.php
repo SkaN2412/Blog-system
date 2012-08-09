@@ -15,6 +15,10 @@ $config = array(
     'blog' => array(
         "entriesPerPage" => 10,
         "commentsPerPage" => 30
+    ),
+    
+    'system' => array(
+        "templatesDir" => "styles".DS."theme".DS."templates"
     )
 );
 ?>
