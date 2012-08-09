@@ -7,6 +7,12 @@
  */
 function page_get($id)
 {
+    // Connect to DB
+    $DBH = new inviPDO();
     
+    // Select page with ID given
+    $DBH->query( "SELECT * FROM `pages` WHERE `id` = :id", array( 'id' => $id ) );
+    $page = $DBH->fetch();
+    return $page[0];
 }
 ?>
