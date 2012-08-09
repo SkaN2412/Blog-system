@@ -9,36 +9,25 @@ function article_get($id)
 {
     $DBH->db_connect();
     
-    // Get article name & text
-    $stmt = $DBH->prepare("SELECT `name`, `author`, `preview`, `text`, `date`, `judged`, `category` FROM `articles` WHERE `id` = :id");
-    $stmt->execute(array( 'id' => $id ));
-    if ($stmt->rowCount() < 1)
+    // Get article's name, text and extended data
+    $DBH->query( "SELECT `name`, `author`, `preview`, `text`, `date`, `judged`, `category` FROM `articles` WHERE `id` = :id", array( 'id' => $id ) );
+    $article = $DBH->fetch();
+    if ( $article == NULL )
     {
         return NULL;
     }
-    $stmt->setFetchMode(PDO::FETCH_ASSOC);
-    $article = $stmt->fetch();
+    $article = $article[0];
+    
     // Parse date to readable view
     $article['date'] = parseDate($article['date']);
+    
     // Get category name
     $article['category_name'] = article_getCategory($article['category']);
+    
     // Get rating
     $article['rating'] = article_getRating($id);
-    return $article;
-}
-/*
- * function article_getCategory() returns category's name of article
- */
-function article_getCategory($id)
-{
-    $DBH = db_connect();
     
-    // Get category name. Nothing here is hard. Extended comments are not nessesary
-    $stmt = $DBH->prepare("SELECT `name` FROM `caegories` WHERE `id` = :id");
-    $stmt->execute(array( 'id' => $id ));
-    $stmt->setFetchMode(PDO::FETCH_ASSOC);
-    $name = $stmt->fetch();
-    return $name['name'];
+    return $article;
 }
 /*
  * function article_getRating() returns rating of article
@@ -49,12 +38,11 @@ function article_getRating($id)
     $DBH = db_connect();
     
     // Get rating from database
-    $stmt = $DBH->prepare("SELECT `good`, `bad` FROM `rating` WHERE `article` = :id");
-    $stmt->execute(array( 'id' => $id ));
-    $stmt->setFetchMode(PDO::FETCH_ASSOC);
-    $rating = $stmt->fetch();
+    $DBH->query( "SELECT `good`, `bad` FROM `rating` WHERE `article` = :id", array( 'id' => $id ) );
+    $rating = $DBH->fetch();
+    
     //Calculate, what to return and return it.
-    return ($rating['good'] - $rating['bad']);
+    return ($rating[0]['good'] - $rating[0]['bad']);
 }
 /*
  * function article_getComments() returns comments of article for page given
@@ -62,25 +50,16 @@ function article_getRating($id)
 function article_getComments( $id, $page )
 {
     $DBH = db_connect();
+    
     // Calculate entry, from which should start selecting
     $CPP = config_get("commentsPerPage");
     $startEntry = ( ( $CPP * $page ) - ( $CPP - 1 ) );
+    
     // Select comments calculated
-    $stmt = $DBH->prepare("SELECT `id`, `author`, `text`, `date`, `parent` FROM `comments` WHERE `article` = :id LIMIT {$startEntry}, {$CPP}");
-    $stmt->execute(array( 'id' => $id ));
-    // If no comments, return null
-    if ($stmt->rowCount() < 1)
-    {
-        return NULL;
-    }
-    $stmt->setFetchMode(PDO::FETCH_ASSOC);
-    $comments = array();
-    // Fill $comments array with rows selected
-    while ( $row = $stmt->fetch() )
-    {
-        $row['date'] = parseDate($row['date']);
-        $comments[] = $row;
-    }
+    $DBH->query( "SELECT `id`, `author`, `text`, `date`, `parent` FROM `comments` WHERE `article` = :id LIMIT {$startEntry}, {$CPP}", array( 'id' => $id ) );
+    $comments = $DBH->fetch();
+    
+    // If $DBH->fetch() returned NULL, NULL will be returned.
     return $comments;
 }
 /*
@@ -91,11 +70,9 @@ function article_countComments($id)
     $DBH = db_connect();
     
     // Select count from DB. It simple
-    $stmt = $DBH->prepare("SELECT COUNT(*) FROM `comments` WHERE `article` = :id");
-    $stmt->execute(array( 'id' => $id ));
-    $stmt->setFetchMode(PDO::FETCH_NUM);
-    $result = $stmt->fetch();
-    return $result[0];
+    $DBH->query( "SELECT COUNT(*) FROM `comments` WHERE `article` = :id", array( 'id' => $id ) );
+    $result = $DBH->fetch("num");
+    return $result[0][0];
 }
 /*
  * article_vote() is needed for changing article's rating. It returns false in case of incorrect voice, in case of non existing article or in case of MySQL error
@@ -104,52 +81,54 @@ function article_vote($id, $voice)
 {
     // Connect to database
     $DBH = db_connect();
+    
     // Check for cookie "voted" on voter's client
     if ( ! isset($_COOKIE['voted']) )
     {
         // If it doesn't set, check for voter's data in DB
-        $stmt = $DBH->prepare("SELECT * FROM `voters` WHERE `article` = :article AND `login` = :login");
         $stmtParams = array(
             'article' => $id,
             'login' => User::get("login")
         );
-        $stmt->execute($stmtParams);
-        if ( $stmt->rowCount() < 1 )
+        $DBH->query( "SELECT * FROM `voters` WHERE `article` = :article AND `login` = :login", $stmtParams );
+        if ( $DBH->stmt->rowCount() > 0 )
         {
             return "voted";
         }
     } else {
         return "voted";
     }
+    
     // Check, is the voice correct. If not, return false
     if ( ( $voice != "good" ) || ( $voice != "bad" ) )
     {
         return FALSE;
     }
+    
     // Select current rating
-    $stmt = $DBH->prepare("SELECT `{$voice}` FROM `rating` WHERE `article` = :id");
-    $stmt->execute( array( 'id' => $id ) );
-    $stmt->setFetchMode(PDO::FETCH_NUM);
-    $rating = $stmt->fetch();
+    $DBH->query( "SELECT `{$voice}` FROM `rating` WHERE `article` = :id", array( 'id' => $id ) );
+    $rating = $DBH->fetch("num");
+    
     // Increase rating by one
-    $rating = $rating[0]++;
+    $rating = $rating[0][0]++;
+    
     // Update rating in DB with new value
-    $stmt = $DBH->prepare("UPDATE `rating` SET `{$voice}` = :rating WHERE `article` = :id");
-    if ( ! $stmt->execute( array( 'rating' => $rating, 'id' => $id ) ) )
+    if ( ! $DBH->query( "UPDATE `rating` SET `{$voice}` = :rating WHERE `article` = :id", array( 'rating' => $rating, 'id' => $id ) ) )
     {
         return FALSE;
     }
+    
     // Insert voter's data into DB: his browser data, IP address. Also set cookie "voted" = TRUE
     $_COOKIE['voted'] = TRUE;
-    $stmt = $DBH->prepare("INSERT INTO `voters` VALUES (:article, :login)");
     $stmtParams = array(
         'article' => $id,
         'login' => User::get("login")
     );
-    if ( ! $stmt->execute($stmtParams) )
+    if ( ! $DBH->query( "INSERT INTO `voters` VALUES (:article, :login)", $stmtParams ) )
     {
         return FALSE;
     }
+    
     // Return true, all is done well
     return TRUE;
 }
@@ -161,9 +140,8 @@ function article_comment($article, $name, $text)
     $DBH = db_connect();
     
     // Check article for existing
-    $stmt = $DBH->prepare("SELECT `id` FROM `articles` WHERE `id` = :id");
-    $stmt->execute( array( 'id' => $article ) );
-    if ( $stmt->rowCount() < 1 )
+    $DBH->query( "SELECT `id` FROM `articles` WHERE `id` = :id", array( 'id' => $article ) );
+    if ( $DBH->stmt->rowCount() < 1 )
     {
         return FALSE;
     }
@@ -172,13 +150,13 @@ function article_comment($article, $name, $text)
     $date = inviDate();
     
     // Insert comment into DB
-    $stmt = $DBH->prepare("INSERT INTO `comments` (`author`, `text`, `date`) VALUES (:name, :text, :date)");
     $stmtParams = array(
         'name' => $name,
         'text' => $text,
         'date' => $date
     );
-    if ( ! $stmt->execute($stmtParams) )
+    $result = $DBH->query( "INSERT INTO `comments` (`author`, `text`, `date`) VALUES (:name, :text, :date)", $stmtParams );
+    if ( ! $result )
     {
         return FALSE;
     } else {
@@ -194,14 +172,14 @@ function article_complain($article, $name, $email, $text)
     $DBH = db_connect();
     
     // Insert data into DB
-    $stmt = $DBH->prepare("INSERT INTO `complaints` VALUES (:article, :name, :email, :text)");
     $stmtParams = array(
         'article' => $article,
         'name' => $name,
         'email' => $email,
         'text' => $text
     );
-    if ( ! $stmt->execute($stmtParams) )
+    $result = $DBH->query( "INSERT INTO `complaints` VALUES (:article, :name, :email, :text)", $stmtParams );
+    if ( ! $result )
     {
         return FALSE;
     } else {
@@ -216,10 +194,9 @@ function article_add($name, $text, $category)
     // Connect to database
     $DBH = db_execute();
     
-    // Check gategory given existing
-    $stmt = $DBH->prepare("SELECT `id` FROM `categories` WHERE `id` = :id");
-    $stmt->execute( array( 'id' => $category ) );
-    if ( $stmt->rowCount() < 1 )
+    // Check gategory given for existing
+    $DBH->query( "SELECT `id` FROM `categories` WHERE `id` = :id",  array( 'id' => $category ) );
+    if ( $DBH->stmt->rowCount() < 1 )
     {
         return FALSE;
     }
@@ -229,7 +206,6 @@ function article_add($name, $text, $category)
     
     // Insert data given and date generated into DB
     $date = inviDate();
-    $stmt = $DBH->prepare("INSERT INTO `articles` (`author`, `name`, `preview`, `text`, `category`, `date`) VALUES (:author, :name, :preview, :text, :category, :date)");
     $stmtParams = array(
         'author' => User::get("login"),
         'name' => $name,
@@ -238,21 +214,20 @@ function article_add($name, $text, $category)
         'category' => $category,
         'date' => $date
     );
-    if ( ! $stmt->execute($stmtParams) )
+    $result = $DBH->query( "INSERT INTO `articles` (`author`, `name`, `preview`, `text`, `category`, `date`) VALUES (:author, :name, :preview, :text, :category, :date)", $stmtParams );
+    if ( ! $result )
     {
         return FALSE;
     }
     
     // Get ID of this article using date
-    $stmt = $DBH->prepare("SELECT `id` FROM `articles` WHERE `date` = :date");
-    $stmt->execute( array( 'date' => $date ) );
-    $stmt->setFetchMode(PDO::FETCH_ASSOC);
-    $id = $stmt->fetch();
-    $id = $id['id'];
+    $DBH->query( "SELECT `id` FROM `articles` WHERE `date` = :date", array( 'date' => $date ) );
+    $id = $DBH->fetch();
+    $id = $id[0]['id'];
     
     // Create entry in rating table for this article
-    $stmt = $DBH->prepare("INSERT INTO `rating` (`article`) VALUES (:id)");
-    if ( ! $stmt->execute( array( 'id' => $id ) ) )
+    $result = $DBH->prepare("INSERT INTO `rating` (`article`) VALUES (:id)", array( 'id' => $id ) );
+    if ( ! $result )
     {
         return FALSE;
     } else {

@@ -16,30 +16,40 @@ function categories_get( $parent = 0 )
     // If parent isn't 0, check it for existing
     if ( $parent != 0 )
     {
-        $stmt = $DBH->prepare("SELECT `id` FROM `categories` WHERE `id` = :id");
-        $stmt->execute( array( 'id' => $parent ) );
-        if ( $stmt->rowCount() < 1 )
+        $DBH->query("SELECT `id` FROM `categories` WHERE `id` = :id", array( 'id' => $parent ) );
+        if ( $DBH->stmt->rowCount() < 1 )
         {
             return FALSE;
         }
     }
     
     // Select categories IDs and names
-    $stmt = $DBH->prepare("SELECT * FROM `categories` WHERE `parent` = :parent");
-    $stmt->execute( array( 'parent' => $parent ) );
+    $DBH->query( "SELECT * FROM `categories` WHERE `parent` = :parent", array( 'parent' => $parent ) );
+    
     // If no entries returned, return NULL
-    if ( $stmt->rowCount() < 1 )
+    if ( $DBH->stmt->rowCount() < 1 )
     {
         return NULL;
     }
-    $stmt->setFetchMode(PDO::FETCH_ASSOC);
-    $children = array();
-    while ( $child = $stmt->fetch() )
-    {
-        $children[] = $child;
-    }
+    $children = $DBH->fetch();
     
     // Return children
     return $categories;
 }
+/*
+ * function category_name() returns category's name for ID given
+ */
+function category_name($id)
+{
+    $DBH = db_connect();
+    
+    // Get category name. Nothing here is hard. Extended comments are not nessesary
+    $DBH->query( "SELECT `name` FROM `caegories` WHERE `id` = :id", array( 'id' => $id ) );
+    $name = $DBH->fetch();
+    return $name[0]['name'];
+}
+
+/*
+ * 
+ */
 ?>

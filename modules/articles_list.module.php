@@ -15,23 +15,19 @@ function articles_list($page)
     $EPP = config_get("blog->entriesPerPage");
     
     //Count all the entries in database and get {$pagenum}-last entries.
-    $query = "SELECT COUNT(*) FROM `articles` WHERE `confirmed` = 1";
-    $stmt->execute($data);
-    $stmt->setFetchMode(PDO::FETCH_NUM);
-    $entriesNum = $stmt->fetch();
-    $entriesNum = $entriesNum[0];
-    $stmt = NULL;
+    $DBH->query( "SELECT COUNT(*) FROM `articles` WHERE `confirmed` = 1");
+    $entriesNum = $DBH->fetch("num");
+    $entriesNum = $entriesNum[0][0];
     
     //Articles are loading from the end. For example: there are 33 articles. On 1st page will be articles from 33 to 24, on 2nd page - 23-14 etc.
     $startEntry = ( $entriesNum - ( ( $EPP * $page ) - 1) );
     
     //Selecting entries
-    $stmt = $DBH->prepare("SELECT `id`, `author`, `name`, `preview`, `category` FROM `articles` WHERE `confirmed` = 1 LIMIT {$startEntry}, {$EPP}");
-    $stmt->execute();
-    $stmt->setFetchMode(PDO::FETCH_ASSOC);
+    $DBH->query("SELECT `id`, `author`, `name`, `preview`, `category` FROM `articles` WHERE `confirmed` = 1 LIMIT {$startEntry}, {$EPP}");
+    $DBH->stmt->setFetchMode(PDO::FETCH_ASSOC);
     $clean = array();
     $judged = array();
-    while ($row = $stmt->fetch())
+    while ($row = $DBH->stmt->fetch())
     {
         // Load extended data
         $row['category_name'] = article_getCategory($row['category']);

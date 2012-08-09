@@ -3,16 +3,18 @@
  * A little module for executing MySQL query safely, if there's will be only one data array.
  */
 class inviPDO extends PDO {
-    private $stmt;
+    public $stmt;
     
     /*
      * Method for prepare and execute query
+     * It requires query to execute
+     * Parameter $data is not nessesary, it's required only in case of holders in query given
      */
-    public function safeQuery( $query, $data )
+    public function query( $query, $data = array() )
     {
         try {
             $this->stmt = $this->prepare($query);
-            $this->stmt->execute($data);
+            $this->stmt->execute( (array)$data );
         } catch ( PDOException $e ) {
             throw new inviException( (int)$e->getCode(), $e->getMessage() );
         }
