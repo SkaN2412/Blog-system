@@ -52,18 +52,4 @@ function inviDate()
 {
     return date("Y.m.d.H:i");
 }
-/*
- * This function returns database connection handle
- */
-function db_connect()
-{
-    // Get connection data from configs
-    $conn_data = config_get("database");
-    // Create PDO object with data got
-    $DBH = new inviPDO("mysql:host={$conn_data['server']};dbname={$conn_data['db']}", $conn_data['login'], $conn_data['password']);
-    // Set encode to utf8. Needed to fix troubles with encode in articles, comments etc.
-    $DBH->query("SET NAMES utf8");
-    // Return connection handle
-    return $DBH;
-}
 ?>

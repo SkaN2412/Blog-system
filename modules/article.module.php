@@ -7,7 +7,7 @@
  */
 function article_get($id)
 {
-    $DBH->db_connect();
+    $DBH = new inviPDO();
     
     // Get article's name, text and extended data
     $DBH->query( "SELECT `name`, `author`, `preview`, `text`, `date`, `judged`, `category` FROM `articles` WHERE `id` = :id", array( 'id' => $id ) );
@@ -18,14 +18,7 @@ function article_get($id)
     }
     $article = $article[0];
     
-    // Parse date to readable view
-    $article['date'] = parseDate($article['date']);
-    
-    // Get category name
-    $article['category_name'] = article_getCategory($article['category']);
-    
-    // Get rating
-    $article['rating'] = article_getRating($id);
+    article_extendedData($article);
     
     return $article;
 }
@@ -35,7 +28,7 @@ function article_get($id)
 function article_getRating($id)
 {
     //Connect to database. $DBH is DataBase Handler. About PDO you can know here: http://habrahabr.ru/post/137664/
-    $DBH = db_connect();
+    $DBH = new inviPDO();
     
     // Get rating from database
     $DBH->query( "SELECT `good`, `bad` FROM `rating` WHERE `article` = :id", array( 'id' => $id ) );
@@ -49,7 +42,7 @@ function article_getRating($id)
  */
 function article_getComments( $id, $page )
 {
-    $DBH = db_connect();
+    $DBH = new inviPDO();
     
     // Calculate entry, from which should start selecting
     $CPP = config_get("commentsPerPage");
@@ -67,7 +60,7 @@ function article_getComments( $id, $page )
  */
 function article_countComments($id)
 {
-    $DBH = db_connect();
+    $DBH = new inviPDO();
     
     // Select count from DB. It simple
     $DBH->query( "SELECT COUNT(*) FROM `comments` WHERE `article` = :id", array( 'id' => $id ) );
@@ -80,7 +73,7 @@ function article_countComments($id)
 function article_vote($id, $voice)
 {
     // Connect to database
-    $DBH = db_connect();
+    $DBH = new inviPDO();
     
     // Check for cookie "voted" on voter's client
     if ( ! isset($_COOKIE['voted']) )
@@ -137,7 +130,7 @@ function article_vote($id, $voice)
  */
 function article_comment($article, $name, $text)
 {
-    $DBH = db_connect();
+    $DBH = new inviPDO();
     
     // Check article for existing
     $DBH->query( "SELECT `id` FROM `articles` WHERE `id` = :id", array( 'id' => $article ) );
@@ -169,7 +162,7 @@ function article_comment($article, $name, $text)
 function article_complain($article, $name, $email, $text)
 {
     // Connect to database
-    $DBH = db_connect();
+    $DBH = new inviPDO();
     
     // Insert data into DB
     $stmtParams = array(
@@ -233,5 +226,20 @@ function article_add($name, $text, $category)
     } else {
         return TRUE;
     }
+}
+
+/*
+ * function returns article array with extended data
+ */
+function article_extendedData(&$article)
+{
+    // Parse date to readable view
+    $article['date'] = parseDate($article['date']);
+    
+    // Get category name
+    $article['category_name'] = article_getCategory($article['category']);
+    
+    // Get rating
+    $article['rating'] = article_getRating($id);
 }
 ?>

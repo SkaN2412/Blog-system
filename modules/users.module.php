@@ -16,7 +16,7 @@ class User
     public static function register($login, $password, $email)
     {
         // Connect to DB
-        $DBH = db_connect();
+        $DBH = new inviPDO();
         
         // Check login given for existing
         if ( self::isRegistered($login) )
@@ -25,10 +25,8 @@ class User
         }
         
         // Check email given for existing
-        $stmt = $DBH->prepare("SELECT `email` FROM `users` WHERE `email` = :email");
-        $stmt->bindParam('email', $email);
-        $stmt->execute();
-        if ( $stmt->rowCount() > 0 )
+        $DBH->query( "SELECT `email` FROM `users` WHERE `email` = :email", array( 'email' => $email ) );
+        if ( $DBH->stmt->rowCount() > 0 )
         {
             throw new inviException(2, "This email is already used");
         }
@@ -38,15 +36,15 @@ class User
         $hash = $crypt->hash($password);
         
         // And now insert data into DB
-        $stmt = $DBH->prepare("INSERT INTO `users` (`login`, `password`, `email`) VALUES (:login, :password, :email)");
         $stmtParams = array(
             'login' => $login,
             'password' => $hash,
             'email' => $email
         );
-        if ( ! $stmt->execute( $stmtParams ) )
+        $result = $DBH->query("INSERT INTO `users` (`login`, `password`, `email`) VALUES (:login, :password, :email)", $stmtParams );
+        if ( ! $result )
         {
-            throw new inviException(3, "MySQL error: {$stmt->errorInfo()}");
+            throw new inviException(3, "MySQL error: {$DBH->stmt->errorInfo()}");
         }
         
         // Now authorize user
@@ -58,22 +56,21 @@ class User
     public static function authorize($login, $password)
     {
         // Connect to DB
-        $DBH = db_connect();
+        $DBH = new inviPDO();
         
         // Generate hash of password
         $crypt = new Bcrypt(15);
         $hash = $crypt->hash($password);
         
         // Get data from DB
-        $stmt = $DBH->prepare("SELECT * FROM `users` WHERE `login` = :login");
-        $stmt->execute( array( 'login' => $login ) );
+        $DBH->query( "SELECT * FROM `users` WHERE `login` = :login", array( 'login' => $login ) );
         // If nothing is returned, throw exception
-        if ( $stmt->rowCount() < 1 )
+        if ( $DBH->stmt->rowCount() < 1 )
         {
             throw new inviException(4, "Login is not registered");
         }
-        $stmt->setFetchMode(PDO::FETCH_ASSOC);
-        $userData = $stmt->fetch();
+        $userData = $DBH->fetch();
+        $userData = $userData[0];
         
         // Check password correctness
         if ( ! $crypt->verify( $password, $userData['password'] ) )
@@ -98,18 +95,18 @@ class User
     public static function get($login)
     {
         // Connect to DB
-        $DBH = db_connect();
+        $DBH = new inviPDO();
         
         // Select data
-        $stmt = $DBH->prepare("SELECT `email`, `group`, `blocked_until` FROM `users` WHERE `login` = :login");
-        $stmt->execute( array( 'login' => $login ) );
+        $DBH->query( "SELECT `email`, `group`, `blocked_until` FROM `users` WHERE `login` = :login", array( 'login' => $login ) );
+        
         // If nothing is returned, throw exception
-        if ( ! $stmt->rowCount() < 1 )
+        if ( $DBH->stmt->rowCount() < 1 )
         {
             throw new inviException(4, "Login is not registered");
         }
-        $stmt->setFetchMode(PDO::FETCH_ASSOC);
-        return $stmt->fetch();
+        $result = $DBH->fetch();
+        return $result[0];
     }
     /*
      * changePassword() requires old password and new password. User must be authorized - login will be taken from auth-data. 
@@ -117,16 +114,15 @@ class User
     public static function chandePassword($password, $newPassword)
     {
         // Connect to DB
-        $DBH = db_connect();
+        $DBH = new inviPDO();
         
         // Take login from class property
         $login = self::$login;
         
         // Check, is the old password correct
-        $stmt = $DBH->prepare("SELECT `password` FROM `users` WHERE `login` = :login");
-        $stmt->execute( array( 'login' => $login ) );
-        $stmt->setFetchMode(PDO::FETCH_ASSOC);
-        $checkPassword = $stmt->fetch();
+        $DBH->query( "SELECT `password` FROM `users` WHERE `login` = :login", array( 'login' => $login ) );
+        $checkPassword = $DBH->fetch();
+        $checkPassword = $checkPassword[0];
         
         // Check password correctness
         $crypt = new Bcrypt(15);
@@ -136,13 +132,12 @@ class User
         }
         
         // Update password in DB
-        $stmt = $DBH->prepare("UPDATE `users` SET `password` = :password WHERE `login` = :login");
         $stmtParams = array(
             'password' => $crypt->hash($newPassword),
             'login' => $login
         );
-        $stmt->execute( $stmtParams );
-        if ( $stmt->rowCount() < 1 )
+        $result = $DBH->query( "UPDATE `users` SET `password` = :password WHERE `login` = :login", $stmtParams );
+        if ( $stmt->rowCount() < 1 || ! $result )
         {
             throw new inviException(6, "Unknown error, nothing is changed");
         }
@@ -168,12 +163,11 @@ class User
     private static function isRegistered($login)
     {
         // Connect to DB
-        $DBH = db_connect();
+        $DBH = new inviPDO();
         
         // Select entry with this login
-        $stmt = $DBH->prepare("SELECT `login` FROM `users` WHERE `login` = :login");
-        $stmt->execute( array( 'login' => $login ) );
-        if ( $stmt->rowCount() < 1 )
+        $DBH->query( "SELECT `login` FROM `users` WHERE `login` = :login", array( 'login' => $login ) );
+        if ( $DBH->stmt->rowCount() < 1 )
         {
             return FALSE;
         } else {

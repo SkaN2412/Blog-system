@@ -6,6 +6,20 @@ class inviPDO extends PDO {
     public $stmt;
     
     /*
+     * Constructor redefines PDO's constructor. It simplifies work with DB in inviCMS
+     */
+    public function __construct() {
+        // Get connection data from configs
+        $conn_data = config_get("database");
+        
+        // Create PDO object with data got
+        parent::__construct("mysql:host={$conn_data['server']};dbname={$conn_data['db']}", $conn_data['login'], $conn_data['password']);
+        
+        // Set encode to utf8. Needed to fix troubles with encode in articles, comments etc.
+        $this->query("SET NAMES utf8");
+    }
+    
+    /*
      * Method for prepare and execute query
      * It requires query to execute
      * Parameter $data is not nessesary, it's required only in case of holders in query given
