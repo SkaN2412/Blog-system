@@ -29,10 +29,11 @@ function callback_send($name, $email, $text)
     $adminEmail = config_get("admin->email");
     $siteName = config_get("site_data->name");
     
+    // Prepare headers
     $headers = "From: {$email}\r\n";
     $headers .= "Reply-To: {$email}\r\n";
     
     // Send email
-    return mail($adminEmail, "Обратная свзяь сайта {$siteName}", $mailText, $headers);
+    return mail($adminEmail, "Обратная связь сайта {$siteName}", $mailText, $headers);
 }
 ?>
