@@ -1,6 +1,0 @@
-<script type="text/javascript" language="javascript" src="./admin/styles/theme/js/filemanager.js"></script>
-			{case=`files!=empty`}<div id="scroll" name="scroll"><table>
-				<tr><td class="manager"><b>Имя</b></td><td class="manager"><b>Ссылка</b></td><td>&nbsp;</td></tr>
-				{array=`files`}<tr><td class="manager"><a href="{link}" title="Посмотреть файл" target="_blank">{name}</a></td><td class="manager">{link}</td><td class="manager"><img class="remove" src="./admin/styles/theme/img/remove.png" title="Удалить" /></td></tr>
-				{/array=`files`}
-				</table></div>{/case=`files!=empty`}{case=`files==empty`}<div class="error">Нету загруженных файлов</div>{/case=`files==empty`}

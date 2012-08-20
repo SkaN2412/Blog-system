@@ -1,10 +1,7 @@
 <?php
 $title = "Страницы не существует";
-require_once("etc".DS."start_templater.php");
-if (!AJAX) include("etc".DS."header.php");
+header("HTTP/1.0 404 Not Found");
+$templater = new inviTemplater(config_get("system->templatesDir"));
 $templater->load("404");
 ?>
 <?=$templater->parse(array()) ?>
-<?php
-if (!AJAX) include("etc".DS."footer.php");
-?>
