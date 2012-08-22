@@ -623,9 +623,8 @@ class User
             throw new inviException(2, "This nickname is already used");
         }
         
-        // All is right, user with data given does not exist. Now generate password hash with Bcrypt class
-        $crypt = new Bcrypt(15);
-        $hash = $crypt->hash($password);
+        // All is right, user with data given does not exist. Now generate password hash
+        $hash = hash("md4", $password);
         
         // And now insert data into DB
         $stmtParams = array(
@@ -662,7 +661,7 @@ class User
         $DBH = DB::$DBH;
         
         // Generate hash of password
-        $crypt = new Bcrypt(15);
+        $hash = hash("md4", $password);
         
         // Get data from DB
         $DBH->query( "SELECT * FROM `users` WHERE `email` = :email", array( 'email' => $email ) );
@@ -675,7 +674,7 @@ class User
         $userData = $userData[0];
         
         // Check password correctness
-        if ( ! $crypt->verify( $password, $userData['password'] ) )
+        if ( $userData['password'] != $hash )
         {
             throw new inviException(5, "Incorrect password");
         }
@@ -775,7 +774,7 @@ class User
     {
         // Connect to DB
         $DBH = DB::$DBH;
-        
+       
         // Select entry with this login
         $DBH->query( "SELECT `email` FROM `users` WHERE `email` = :login", array( 'login' => $login ) );
         if ( $DBH->stmt->rowCount() < 1 )

@@ -1,6 +1,6 @@
 <?php
 $accepted_list = array(
-	'file',
+    'file',
     'rubriki',
     'registratsija',
     'dobavitj-statju',

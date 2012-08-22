@@ -1,5 +1,4 @@
 <?php
-$init = "<?php\ninviException::__init(0);\n\nDB::connect();\n?>";
 if (isset($_POST['server']))
 {
     try {
@@ -7,7 +6,6 @@ if (isset($_POST['server']))
         file_put_contents("etc/config.ini", $content);
         $DBH = new inviPDO();
         $DBH->query( file_get_contents("etc/dump.sql") );
-        file_put_contents("init/other.php", $init);
         header("Location: ./");
     } catch ( inviException $e ) {
         print( $e->getMessage() );
@@ -24,7 +22,7 @@ if (isset($_POST['server']))
             <label for="server">Сервер СУБД MySQL: </label><input type="text" id="server" name="server" /><br />
             <label for="login">Логин для доступа к БД: </label><input type="text" id="login" name="login" /><br />
             <label for="password">Пароль: </label><input type="password" id="password" name="password" /><br />
-            <label for="db">Сервер СУБД MySQL: </label><input type="text" id="db" name="db" /><br />
+            <label for="db">Имя базы данных: </label><input type="text" id="db" name="db" /><br />
             <input type="submit" value="Продолжить" />
         </form>
     </body>
