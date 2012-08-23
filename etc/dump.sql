@@ -3,7 +3,7 @@
 -- http://www.phpmyadmin.net
 --
 -- Хост: localhost
--- Время создания: Авг 20 2012 г., 14:50
+-- Время создания: Авг 23 2012 г., 08:24
 -- Версия сервера: 5.5.24
 -- Версия PHP: 5.3.10-1ubuntu3.2
 
@@ -55,7 +55,15 @@ CREATE TABLE IF NOT EXISTS `categories` (
   `parent` int(11) NOT NULL COMMENT 'Parent category''s ID',
   PRIMARY KEY (`id`),
   KEY `parent` (`parent`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 AUTO_INCREMENT=1 ;
+) ENGINE=InnoDB  DEFAULT CHARSET=utf8 AUTO_INCREMENT=3 ;
+
+--
+-- Дамп данных таблицы `categories`
+--
+
+INSERT INTO `categories` (`id`, `name`, `parent`) VALUES
+(1, 'list1', 0),
+(2, 'list2', 0);
 
 -- --------------------------------------------------------
 
@@ -116,7 +124,7 @@ CREATE TABLE IF NOT EXISTS `users` (
   `group` char(50) NOT NULL DEFAULT 'user' COMMENT 'Rights group',
   `blocked_until` datetime DEFAULT NULL COMMENT 'If user is blocked, here should be date of unblocking',
   PRIMARY KEY (`id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 AUTO_INCREMENT=1 ;
+) ENGINE=InnoDB  DEFAULT CHARSET=utf8 AUTO_INCREMENT=2 ;
 
 -- --------------------------------------------------------
 
