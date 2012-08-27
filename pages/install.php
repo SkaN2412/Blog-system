@@ -7,7 +7,7 @@ if (isset($_POST['server']))
         $DBH = new inviPDO();
         $DBH->query( file_get_contents("etc/dump.sql") );
         header("Location: ./");
-    } catch ( inviException $e ) {
+    } catch ( PDOException $e ) {
         print( $e->getMessage() );
     }
 }

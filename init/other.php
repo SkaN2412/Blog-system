@@ -1,5 +1,9 @@
 <?php
 inviException::__init(0);
 
-@DB::connect();
+try {
+DB::connect();
+} catch ( PDOException $e ) {
+    print( $e->getMessage() );
+}
 ?>

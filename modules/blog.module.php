@@ -287,7 +287,7 @@ class Categories {
     public static function fromList($id)
     {
         // If $id is 0, 1 or 2, throw exception
-        if ( $id == 0 || $id == 1 || $id == 3 || ! self::exists($id) )
+        if ( $id == 0 || $id == 1 || $id == 2 || ! self::exists($id) )
         {
             throw inviException(103, "Unexisting category given");
         }
@@ -385,6 +385,8 @@ class Categories {
         
         // Select parent's parent
         $DBH->query( "SELECT `parent` FROM `categories` WHERE `id` = :id", array( 'id' => $parent ) );
+        $parent = $DBH->fetch();
+        $parent = $parent[0]['parent'];
         
         // If parent is 1, category is 2nd level, if not - 3rd level
         if ( $parent == 1 )
@@ -410,8 +412,7 @@ class Categories {
         if ( $parent != 1 && $parent != 2 )
         {
             // Check for existing
-            $DBH->query( "SELECT `id` FROM `categories` WHERE `id` = :id", array( 'id' => $parent ) );
-            if ( $DBH->stmt->rowCount() < 1 )
+            if ( ! self::exists($parent) )
             {
                 throw new inviException(101, "Unexisting parent given");
             }

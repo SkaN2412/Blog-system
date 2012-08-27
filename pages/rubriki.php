@@ -3,40 +3,29 @@ if ( isset( $_GET['action'] ) )
 {
 switch ( $_GET['action'] )
 {
-    case 'getCategoriesTrace':
-        $trace = Categories::trace($_GET['cat']);
-        foreach ( $trace as $value )
+    case 'loadChildren':
+        $children = Categories::get($_GET['cat']);
+        if ( $children == NULL )
         {
-            print( Categories::name($value) . " > " );
+            exit;
         }
+        $content = "<ul>";
+        foreach ($children as $category) {
+            $content .= "<li><span id=\"{$category['id']}\">{$category['name']}</span></li>";
+        }
+        $content .= "</ul>";
+        print( $content );
         exit;
 }
 }
 
 if ( isset($_POST['name']) )
 {
-    try {
+    try { 
         Categories::add($_POST['name'], $_POST['parent']);
         print( "Рубрика добавлена!" );
     } catch ( inviException $e ) {
         print( $e->getMessage() );
-    }
-}
-
-$DBH = DB::$DBH;
-
-$DBH->query( "SELECT `id`, `name` FROM `categories`" );
-$categories = $DBH->fetch();
-for ($i=0; $i<count($categories); $i++)
-{
-    switch ($categories[$i]["id"])
-    {
-        case 1:
-            $categories[$i]['name'] = "1-ый список";
-            break;
-        case 2:
-            $categories[$i]['name'] = "2-ой список";
-            break;
     }
 }
 ?>
@@ -44,36 +33,72 @@ for ($i=0; $i<count($categories); $i++)
     <head>
         <title>Добавление рубрик</title>
         <meta http-equiv="Content-type" content="text/html; Charset=utf8" />
+        <style>
+            li {
+                width: 200px;
+            }
+            
+            li:hover {
+                cursor: pointer;
+            }
+            
+            span.selected {
+                background-color: #d9ea53;
+            }
+        </style>
         <script src="styles/js/jquery.js"></script>
         <script>
             $(document).ready(function(){
-                $("#parent, #name").change(function(){
-                    $.ajax({
-                        url: "?id=rubriki&action=getCategoriesTrace&cat="+$("#parent").val(),
-                        dataType: "html",
-                        success: function(html) {
-                            $text = html + $("#name").val();
-                            $("#trace").text($text);
-                        }
-                    });
+                $("li").each(function(){
+                    catLoadChildren($(this).children("span").attr("id"));
+                });
+                
+                spanListener();
+                
+                $("span").click(function(){
+                    $("span.selected").removeClass("selected");
+                    $(this).addClass("selected");
+                    $("#parent").val( $(this).attr("id") );
                 });
             });
+            
+            function spanListener() {
+                $("span").click(function(){
+                    $("span.selected").removeClass("selected");
+                    $(this).addClass("selected");
+                    $("#parent").val( $(this).attr("id") );
+                });
+            }
+            
+            function catLoadChildren(i) {
+                $.ajax({
+                    url: "?id=rubriki&action=loadChildren&cat="+i,
+                    dataType: "html",
+                    success: function(html) {
+                        $("span#"+i).after(html);
+                        $("span#"+i).next().children("li").each(function(){
+                            catLoadChildren($(this).children("span").attr("id"));
+                        });
+                        $("span").unbind("click");
+                        spanListener();
+                    }
+                });
+            }
         </script>
     </head>
     <body>
         <form method="post">
             <label for="name">Имя рубрики: </label><input type="text" id="name" name="name" /><br />
-            <label for="parent">Родительская рубрика: </label><select id="parent" name="parent">
-                <?php
-                foreach ($categories as $cat)
-                {
-                    ?>
-                <option value="<?=$cat['id'] ?>"><?=$cat['name'] ?></option>
-                
-                    <?php
-                }
-                ?>
-            </select><span id="trace" name="trace"></span><br />
+            <input type="hidden" id="parent" name="parent" />
+            <h3>Выберите родительскую рубрику</h3>
+            <ul>
+                <li>
+                    <span id="1">Первый список</span>
+                </li>
+                <li>
+                    <span id="2">Второй список</span>
+                </li>
+            </ul>
             <input type="submit" value="Добавить" />
         </form>
     </body>

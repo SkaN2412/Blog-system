@@ -1,39 +1,85 @@
-<?php
-if ( isset( $_GET['action'] ) )
-{
-switch ( $_GET['action'] )
-{
-    case 'getCategoriesTrace':
-        $trace = Categories::trace($_GET['cat']);
-        foreach ( $trace as $value )
-        {
-            print( Categories::name($value) );
-            if ( end($trace) != $value )
-            {
-                print( " > " );
-            }
-        }
-        exit;
-}
-}
-?>
 <html>
     <head>
         <title>Добавить статью</title>
         <meta http-equiv="Content-type" content="text/html; Charset=utf8" />
+        <style>
+            li:hover {
+                cursor: pointer;
+            }
+            
+            span.selected {
+                background-color: #d9ea53;
+            }
+        </style>
         <script src="styles/js/jquery.js"></script>
         <script>
             $(document).ready(function(){
-                $("#category1").change(function(){
-                    $.ajax({
-                        url: "?id=dobavitj-statju&action=getCategoriesTrace&cat="+$("#category1").val(),
-                        dataType: "html",
-                        success: function(html) {
-                            $("#trace").text(html);
-                        }
-                    });
+                $("ul").each(function(){
+                    switch ($(this).attr("id")) {
+                        case "list1":
+                            $.ajax({
+                                url: "?id=rubriki&action=loadChildren&cat=1",
+                                dataType: "html",
+                                success: function(html) {
+                                    $("ul#list1").append(html);
+
+                                    $("ul#list1").children("ul").children("li").each(function(){
+                                        catLoadChildren($(this).children("span").attr("id"));
+                                    });
+                                    $("span").unbind("click");
+                                    spanListener();
+                                }
+                            });
+                            break;
+                        case "list2":
+                            $.ajax({
+                                url: "?id=rubriki&action=loadChildren&cat=2",
+                                dataType: "html",
+                                success: function(html) {
+                                    $("ul#list2").append(html);
+                                }
+                            });
+                            break;
+                    }
                 });
             });
+            
+            function spanListener() {
+                $("span").click(function(){
+                    if ($(this).parents("#list1").length > 0) {
+                        $("#list1 span.selected").removeClass("selected");
+                        $(this).addClass("selected");
+                        $("#category1").val( $(this).attr("id") );
+                        alert($("#category1").val());
+                    }
+                    if ($(this).parents("#list2").length > 0) {
+                        $("#list2 span.selected").removeClass("selected");
+                        $(this).addClass("selected");
+                        $("#category2").val( $(this).attr("id") );
+                        alert($("#category2").val());
+                    }
+                });
+            }
+            
+            function catLoadChildren(i) {
+                $.ajax({
+                    url: "?id=rubriki&action=loadChildren&cat="+i,
+                    dataType: "html",
+                    success: function(html) {
+                        if (i==1 || i==2){
+                            $("ul#list"+i).append(html);
+                        } else {
+                            $("span#"+i).after(html);
+                        }
+                        
+                        $("span#"+i).next().children("li").each(function(){
+                            catLoadChildren($(this).children("span").attr("id"));
+                        });
+                        $("span").unbind("click");
+                        spanListener();
+                    }
+                });
+            }
         </script>
     </head>
     <body>
@@ -50,6 +96,7 @@ try {
             <input type="submit" value="Авторизоваться" />
         </form>
     <?php
+    exit;
 }
 $name = "";
 $text = "";
@@ -75,49 +122,20 @@ if ( isset($_POST['name']) )
         $date = $_POST['date'];
     }
 }
-
-function catsRecursive($id = 1) {
-    $cats = Categories::get($id);
-    if ( $cats != NULL )
-    {
-        foreach ($cats as $one) {
-            $children = catsRecursive($one['id']);
-            if ($children == NULL)
-            {
-                continue;
-            }
-            $cats = array_merge($cats, $children);
-        }
-    }
-    return $cats;
-}
-$categories1 = catsRecursive();
-$categories2 = Categories::get(2);
 ?>
         <form method="post">
             <label for="name">Заголовок: </label><input type="text" id="name" name="name" value="<?=$name ?>" /><br />
             <label for="text">Текст статьи:</label><br />
             <textarea id="text" name="text" cols="60" rows="20"><?=$text ?></textarea><br />
-            <label for="category1">Рубрика из 1-го списка: </label><select id="category1" name="category1">
-                <?php
-                foreach ($categories1 as $one) {
-                    ?>
-                <option value="<?=$one['id'] ?>"><?=$one['name'] ?></option>
+            <input type="hidden" id="category1" name="category1" /><input type="hidden" id="category2" name="category2" />
+            <h3>Рубрика из первого списка: </h3>
+            <ul id="list1" name="list1">
                 
-                    <?php
-                }
-                ?>
-            </select><span id="trace" name="trace"></span><br />
-            <label for="category2">Рубрика из 2-го списка: </label><select id="category2" name="category2">
-                <?php
-                foreach ($categories2 as $one) {
-                    ?>
-                <option value="<?=$one['id'] ?>"><?=$one['name'] ?></option>
+            </ul><br />
+            <h3>Рубрика из 2-го списка: </h3>
+            <ul id="list2" name="list2">
                 
-                    <?php
-                }
-                ?>
-            </select><br />
+            </ul><br />
             <label for="date">Дата в формате YYYY-MM-DD HH:MM:SS : </label><input type="text" id="date" name="date" value="<?=$date ?>" /><br />
             <input type="submit" value="Добавить" /><br />
             <p>Текст будет разбит на превью и остальной текст автоматически</p>
