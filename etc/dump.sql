@@ -1,9 +1,9 @@
 -- phpMyAdmin SQL Dump
--- version 3.4.5deb1
+-- version 3.4.10.1deb1
 -- http://www.phpmyadmin.net
 --
 -- Хост: localhost
--- Время создания: Авг 23 2012 г., 08:24
+-- Время создания: Сен 05 2012 г., 06:18
 -- Версия сервера: 5.5.24
 -- Версия PHP: 5.3.10-1ubuntu3.2
 
@@ -19,6 +19,8 @@ SET time_zone = "+00:00";
 --
 -- База данных: `blog_system`
 --
+CREATE DATABASE `blog_system` DEFAULT CHARACTER SET utf8 COLLATE utf8_general_ci;
+USE `blog_system`;
 
 -- --------------------------------------------------------
 
@@ -33,15 +35,24 @@ CREATE TABLE IF NOT EXISTS `articles` (
   `preview` char(128) NOT NULL COMMENT 'Article''s preview',
   `full` text NOT NULL COMMENT 'Article''s text',
   `date` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT 'Date of creating article',
-  `category1` int(11) NOT NULL COMMENT 'Category from 1st list',
+  `category11` int(11) NOT NULL,
+  `category12` int(11) DEFAULT NULL,
+  `category13` int(11) DEFAULT NULL,
   `category2` int(11) NOT NULL COMMENT 'Category from 2nd list',
   `good_voices` int(11) NOT NULL DEFAULT '0' COMMENT 'Number of good voices',
   `bad_voices` int(11) NOT NULL DEFAULT '0' COMMENT 'Number of bad voices',
   `confirmed` tinyint(1) NOT NULL COMMENT 'Is article confirmed',
   `judged` tinyint(1) NOT NULL COMMENT 'Is article judged',
   PRIMARY KEY (`id`),
-  KEY `author_id` (`author_id`,`category1`,`category2`,`confirmed`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 COMMENT='Table with articles' AUTO_INCREMENT=1 ;
+  KEY `author_id` (`author_id`,`category2`,`confirmed`)
+) ENGINE=InnoDB  DEFAULT CHARSET=utf8 COMMENT='Table with articles' AUTO_INCREMENT=2 ;
+
+--
+-- Дамп данных таблицы `articles`
+--
+
+INSERT INTO `articles` (`id`, `author_id`, `name`, `preview`, `full`, `date`, `category11`, `category12`, `category13`, `category2`, `good_voices`, `bad_voices`, `confirmed`, `judged`) VALUES
+(1, 2, 'Первая статья', 'Эту статью надо написать, чтобы можно было спокойно продолжить', ' разработку. Я опять переустановил ось, но не подумал о дампе БД. Надо как-то сделать что ли автоматический бекап БД регулярный...\nP.S.: ЗАВТРА ДЕДЛАЙН!!! 5.9 - ТОТ САМЫЙ ДЕНЬ!!!!!!!!!!!11', '2009-12-31 21:00:13', 3, 0, 0, 4, 0, 0, 1, 0);
 
 -- --------------------------------------------------------
 
@@ -55,7 +66,7 @@ CREATE TABLE IF NOT EXISTS `categories` (
   `parent` int(11) NOT NULL COMMENT 'Parent category''s ID',
   PRIMARY KEY (`id`),
   KEY `parent` (`parent`)
-) ENGINE=InnoDB  DEFAULT CHARSET=utf8 AUTO_INCREMENT=3 ;
+) ENGINE=InnoDB  DEFAULT CHARSET=utf8 AUTO_INCREMENT=5 ;
 
 --
 -- Дамп данных таблицы `categories`
@@ -63,7 +74,9 @@ CREATE TABLE IF NOT EXISTS `categories` (
 
 INSERT INTO `categories` (`id`, `name`, `parent`) VALUES
 (1, 'list1', 0),
-(2, 'list2', 0);
+(2, 'list2', 0),
+(3, 'Рубрика 1', 1),
+(4, 'Рубрика 2', 2);
 
 -- --------------------------------------------------------
 
@@ -124,7 +137,14 @@ CREATE TABLE IF NOT EXISTS `users` (
   `group` char(50) NOT NULL DEFAULT 'user' COMMENT 'Rights group',
   `blocked_until` datetime DEFAULT NULL COMMENT 'If user is blocked, here should be date of unblocking',
   PRIMARY KEY (`id`)
-) ENGINE=InnoDB  DEFAULT CHARSET=utf8 AUTO_INCREMENT=2 ;
+) ENGINE=InnoDB  DEFAULT CHARSET=utf8 AUTO_INCREMENT=3 ;
+
+--
+-- Дамп данных таблицы `users`
+--
+
+INSERT INTO `users` (`id`, `email`, `password`, `nickname`, `group`, `blocked_until`) VALUES
+(2, 'andreykamozin@gmail.com', '1611d15f53a43081aff5afa84b7ee948', 'SkaN', 'user', NULL);
 
 -- --------------------------------------------------------
 

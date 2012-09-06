@@ -5,6 +5,11 @@ $accepted_list = array(
     'registratsija',
     'dobavitj-statju',
     'main',
-    'install'
+    'install',
+    'test',
+    'spisok',
+    'avtorizatsija',
+    'statja',
+    'golosovatj'
 );
 ?>

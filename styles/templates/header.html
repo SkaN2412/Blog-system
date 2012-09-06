@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>{var='title'}</title>
+        <meta http-equiv="Content-type" content="text/html; Charset=utf-8" />
+        <link rel="stylesheet" href="styles/stylesheets/960gs.css" />
+        <link rel="stylesheet" href="styles/stylesheets/main.css" />
+        <link rel="stylesheet" href="styles/stylesheets/text.css" />
+        <script src="styles/js/jquery.js"></script>
+        <script src="styles/js/jquery.hints.js"></script>
+        <script src="styles/js/interface.js"></script>
+        <script src="styles/js/authorize.js"></script>
+        <script src="styles/js/register.js"></script>
+        <script src="styles/js/add_article.js"></script>
+        <script src="styles/js/rating.js"></script>
+    </head>
+    <body>
+        <div class="container_12">
+            <div class="grid_4" id="errorPopup" name="errorPopup"></div>
+            <div class="grid_8">
+                <span id="site_name">{var='site_name'}</span><br />
+                <span id="site_desc">{var='site_desc'}</span>
+            </div>
+            <div class="grid_4" id="userpeak">
+                {case='authed==true'}{include='userpeak'}{/case='authed==true'}{case='authed==false'}{include='auth_form'}{/case='authed==false'}
+            </div>
+            <div class="clear"></div>
+            
+            <div id="top_menu">
+                <div class="grid_3" id="top10">ТОП-10&nbsp;&DownArrow;</div>
+                <div class="grid_3 alpha"><a href="?id=dobavitj-statju">Добавить статью</a></div>
+                <div class="grid_3">Правила сайта</div>
+                <div class="grid_3 omega">О сайте</div>
+            </div>
+            <div class="clear"></div>
+            
+            <div id="tops">
+                <div class="grid_3">За день</div><div class="clear"></div>
+                <div class="grid_3">За неделю</div><div class="clear"></div>
+                <div class="grid_3">За месяц</div><div class="clear"></div>
+                <div class="grid_3">За год</div><div class="clear"></div>
+            </div>
+            <div class="clear"></div>

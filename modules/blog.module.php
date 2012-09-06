@@ -13,14 +13,62 @@ class Articles {
         // Connect to DB
         $DBH = DB::$DBH;
         
-        // Get entry from which should start selecting
-        $startEntry = self::startEntry($page, $category);
-        // Get number of entries per page
+        // Calculate entry from which should start selecting
+        // EPP is number of entries per page
         $EPP = config_get("blog/entriesPerPage");
         
+        // Prepare count query
+        $query = "SELECT COUNT(*) FROM `articles` WHERE `confirmed` = 1";
+        $params = array();
+        if ( $category != NULL )
+        {
+            $query .= " AND `category1` = :category OR `category2` = :category";
+            $params['category'] = $category;
+        }
+        
+        $DBH->query( $query, $params );
+        $count = $DBH->fetch("num");
+        $count = $count[0][0];
+        
+        // Calculate
+        $startEntry = (int)( $count - ( ( $EPP * $page ) - 1 ) );
+        // If startEntry < 10, incorrent navigation page is given or no articles in DB, throw exception
+        if ( $startEntry <= (-$EPP + 1) )
+        {
+            throw new inviException( 100, "No articles" );
+        }
+        
+        // If startEntry is negative number, calculate how many entries must return
+        if ( $startEntry < 0 )
+        {
+            $EPP += $startEntry;
+            $startEntry = 0;
+        }
+        
         // Select entries
-        $query = "SELECT `id`, `author_id`, `name`, `preview`, `date`, `category1`, `category2`, `good_voices`, `bad_voices`, `judged` FROM `articles` WHERE `";
-        // TODO: end method...
+        $query = "SELECT `id`, `author_id`, `name`, `preview`, `date`, `category11`, `category12`, `category13`, `category2`, `good_voices`, `bad_voices`, `judged` FROM `articles` WHERE `confirmed` = 1";
+        $params = array();
+        // If category given, select articles with category given
+        if ( $category != NULL )
+        {
+            $query .= " AND `category1` = :category OR `category2` = :category";
+            $params['category'] = $category;
+        }
+        // End query
+        $query .= " ORDER BY `date` DESC LIMIT {$startEntry}, {$EPP}";
+        
+        // Execute query with parameters
+        $DBH->query( $query, $params );
+        $articles = $DBH->fetch();
+        
+        // Handle categories trace
+        $templater = new inviTemplater("styles".DS."templates");
+        for ($i=0; $i<count($articles); $i++)
+        {
+            Article::extData($articles[$i]);
+        }
+        
+        return $articles;
     }
     
     /**
@@ -72,7 +120,12 @@ class Articles {
         $entriesNum = $entriesNum[0][0];
 
         //Articles are loading from the end. For example: there are 33 articles. On 1st page will be articles from 33 to 24, on 2nd page - 23-14 etc.
-        return ( $entriesNum - ( ( $EPP * $page ) - 1) );
+        if ( $entriesNum < 10 )
+        {
+            return 0;
+        } else {
+            return ( $entriesNum - ( ( (int)$EPP * $page ) - 1) );
+        }
     }
 }
 
@@ -86,33 +139,91 @@ class Article {
      */
     public static function get($id)
     {
+        // Connect to DB
+        $DBH = DB::$DBH;
         
+        // Select article
+        $DBH->query( "SELECT `id`, `author_id`, `name`, `preview`, `full`, `date`, `category11`, `category12`, `category13`, `category2`, `good_voices`, `bad_voices`, `confirmed`, `judged` FROM `articles` WHERE `id` = :id", array( 'id' => $id ) );
+        $article = $DBH->fetch();
+        $article = $article[0];
+        
+        // Get extended data
+        self::extData($article);
+        
+        return $article;
     }
     
     /**
-     * Method gets rating of article. If you give it type, it will return number of voices in type given
+     * Method increments rating of article
      * 
      * @param int $id ID of article
-     * @param string $type [optional] Type of voices. Should be "good" or "bad"
-     * 
-     * @return int Rating
-     */
-    public static function rating($id, $type = NULL)
-    {
-        
-    }
-    
-    /**
-     * Method changes article rating in the DB
-     * 
-     * @param int $id ID of article
-     * @param string $type Type of voice. Should be good or bad
-     * 
-     * @return void
+     * @param string $type Type of voice. Should be 'good' or 'bad'
+     * @throws inviException
      */
     public static function vote($id, $type)
     {
+        // Connect to DB
+        $DBH = DB::$DBH;
         
+        // Check, is user authorized. If yes, check, did he voted
+        if ( User::authorized() && Article::voted($id) )
+        {
+            throw new inviException( 7, "Уже голосовал" );
+        } elseif ( ! User::authorized() ) {
+            throw new inviException( 9, "Голосовать могут только авторизованные" );
+        }
+        
+        // Select article's rating, if correct is given
+        if ( $type == "good" || $type == "bad" )
+        {
+            $DBH->query( "SELECT `{$type}_voices` FROM `articles` WHERE `id` = :id", array( 'id' => $id ) );
+            
+            // If 0 is returned, throw exception
+            if ( $DBH->stmt->rowCount() < 1 )
+            {
+                throw new inviException( 6, "Unexisting article given" );
+            }
+            
+            // Update rating
+            $rating = $DBH->fetch("num");
+            $rating = (int)$rating[0][0];
+            
+            // Increment rating and update in DB
+            $rating++;
+            $params = array(
+                'rating' => $rating,
+                'article' => $id
+            );
+            $DBH->query( "UPDATE `articles` SET `{$type}_voices` = :rating WHERE `id` = :article", $params );
+            
+            // Insert voter's data into DB
+            $uData = User::get();
+            $params = array(
+                'uid' => $uData['id'],
+                'aid' => $id,
+                'type' => $type
+            );
+            $DBH->query( "INSERT INTO `voters` VALUES (:uid, :aid, :type)", $params );
+            
+        } else {
+            throw new inviException( 5, "Incorrect voice given" );
+        }
+    }
+    
+    public static function rating($id)
+    {
+        // Connect to DB
+        $DBH = DB::$DBH;
+        
+        // Select rating
+        $DBH->query( "SELECT `good_voices`, `bad_voices` FROM `articles` WHERE `id` = :id", array( 'id' => $id ) );
+        $rating = $DBH->fetch();
+        $rating = $rating[0];
+        
+        // End rating is good - bad
+        $rating = ( (int)$rating['good_voices'] - (int)$rating['bad_voices'] );
+        
+        return $rating;
     }
     
     /**
@@ -143,6 +254,26 @@ class Article {
             throw new inviException(1001, "Category given does not exist");
         }
         
+        // Get trace of 1st category
+        $trace = Categories::trace($category1);
+        switch ( count($trace) )
+        {
+            case 3:
+                $category11 = $trace[2];
+                $category12 = $trace[1];
+                $category13 = $trace[0];
+                break;
+            case 2:
+                $category11 = $trace[1];
+                $category12 = $trace[0];
+                $category13 = 0;
+                break;
+            case 1:
+                $category11 = $trace[0];
+                $category12 = $category13 = 0;
+                break;
+        }
+        
         // All's right, insert article
         $DBH = DB::$DBH;
         
@@ -153,15 +284,84 @@ class Article {
             'name' => $name,
             'preview' => $preview,
             'full' => $full,
-            'category1' => $category1,
+            'category11' => $category11,
+            'category12' => $category12,
+            'category13' => $category13,
             'category2' => $category2,
             'date' => $date
         );
         
-        $DBH->query( "INSERT INTO `articles` (`author_id`, `name`, `preview`, `full`, `category1`, `category2`, `date`) VALUES (:author, :name, :preview, :full, :category1, :category2, :date)", $params );
+        $DBH->query( "INSERT INTO `articles` (`author_id`, `name`, `preview`, `full`, `category11`, `category12`, `category13`, `category2`, `date`) VALUES (:author, :name, :preview, :full, :category11, :category12, :category13, :category2, :date)", $params );
         if ( $DBH->stmt->rowCount() < 1 )
         {
             throw new inviException(102, "MySQL error");
+        }
+    }
+        
+    public static function extData(&$article)
+    {
+        $content = "";
+        $templater = new inviTemplater("styles".DS."templates");
+
+        if ( (int)$article['category12'] == 0 )
+        {
+            $templater->load("article_category_last");
+            $content .= $templater->parse( array(
+                'id' => $article['category11'],
+                'name' => Categories::name($article['category11'])
+            ) );
+            $article['category1'] = $content;
+            unset( $article['category11'], $article['category12'], $article['category13'] );
+        } elseif ( (int)$article['category13'] == 0 && (int)$article['category12'] != 0 ) {
+            $templater->load("article_category");
+            $content .= $templater->parse( array(
+                'id' => $article['category11'],
+                'name' => Categories::name($article['category11'])
+            ) );
+
+            $templater->load("article_category_last");
+            $content .= $templater->parse( array(
+                'id' => $article['category11'],
+                'name' => Categories::name($article['category12'])
+            ) );
+
+            $article['category1'] = $content;
+            unset( $article['category11'], $article['category12'], $article['category13'] );
+        } elseif ( (int)$article['category12'] != 0 && (int)$article['category13'] != 0 ) {
+            $templater->load("article_category");
+            $content .= $templater->parse( array(
+                'id' => $article['category11'],
+                'name' => Categories::name($article['category11'])
+            ) );
+            $content .= $templater->parse( array(
+                'id' => $article['category12'],
+                'name' => Categories::name($article['category12'])
+            ) );
+
+            $templater->load("article_category_last");
+            $content .= $templater->parse( array(
+                'id' => $article['category13'],
+                'name' => Categories::name($article['category13'])
+            ) );
+
+            $article['category1'] = $content;
+            unset( $article['category11'], $article['category12'], $article['category13'] );
+        }
+        
+        if ( Article::voted($article['id']) )
+        {
+            $article['rating'] = "*";
+        } else {
+            $article['rating'] = ( $article['good_voices'] - $article['bad_voices'] );
+        }
+        unset($article['good_voices'], $article['bad_voices']);
+
+        $article['category2_name'] = Categories::name($article['category2']);
+        
+        $article['preview'] = preg_replace("/\n/", "</p><p>", $article['preview']);
+        if ( isset($article['full']) )
+        {
+            $article['full'] = preg_replace("/\n/", "</p><p>", $article['full']);
         }
     }
     
@@ -178,6 +378,27 @@ class Article {
     public static function complain($article, $name, $email, $text)
     {
         
+    }
+    
+    private static function voted($article)
+    {
+        // Connect to DB
+        $DBH = DB::$DBH;
+        
+        // Select entry for article given and current user from table 'voters'
+        $userData = User::get();
+        $params = array(
+            'uid' => $userData['id'],
+            'aid' => $article
+        );
+        unset($userData);
+        $DBH->query( "SELECT `user_id` FROM `voters` WHERE `user_id` = :uid AND `article_id` = :aid", $params );
+        if ( $DBH->stmt->rowCount() < 1 )
+        {
+            return FALSE;
+        } else {
+            return TRUE;
+        }
     }
 }
 
@@ -280,7 +501,10 @@ class Categories {
             $trace[] = $id = (int)$id[0][0];
         }
         
+        end($trace);
+        unset($trace[key($trace)]);
         krsort($trace);
+        
         return $trace;
     }
     

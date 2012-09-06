@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>Установка CMS</title>
+        <meta http-equiv="Content-type" content="text/html; Charset=utf-8" />
+        <link rel="stylesheet" href="styles/stylesheets/960gs.css" />
+        <link rel="stylesheet" href="styles/stylesheets/main.css" />
+        <link rel="stylesheet" href="styles/stylesheets/text.css" />
+        <style>
+            label {
+                width: 200px !important;
+            }
+        </style>
+    </head>
+    <body>
+        <form method="post">
+            <label for="server">Сервер СУБД MySQL: </label><input type="text" id="server" name="server" /><br />
+            <label for="login">Логин для доступа к БД: </label><input type="text" id="login" name="login" /><br />
+            <label for="password">Пароль: </label><input type="password" id="password" name="password" /><br />
+            <label for="db">Имя базы данных: </label><input type="text" id="db" name="db" /><br />
+            <h3>Данные о сайте</h3>
+            <label for="name">Имя сайта: </label><input type="text" id="name" name="name" /><br />
+            <label for="desc">Короткое описание: </label><input type="text" id="desc" name="desc" /><br />
+            <input type="submit" value="Продолжить" class="main" />
+        </form>
+    </body>
+</html>

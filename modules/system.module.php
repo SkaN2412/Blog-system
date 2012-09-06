@@ -93,7 +93,7 @@ class inviTemplater {
 	private function parseVar($match, $code) {
 		preg_match('/\{var=\'(.*?)\'\}/', $match, $var);
 		if (!isset($this->vars[$var[1]]))
-		{
+		{ var_dump($this->vars);
 			throw new inviException(10004, "Variable $".$var[1]." does not exist");
 		}
 		$code = str_replace($match, $this->vars[$var[1]], $code);
@@ -502,79 +502,96 @@ final class inviException extends Exception {
     }
 }
 
-/*
- * A little module for executing MySQL query safely, if there's will be only one data array.
+/**
+ * Class inviPDO extends PDO and redefines some his methods for simplifying work with it 
+ * 
+ * @author Andrey "SkaN" Kamozin <andreykamozin@gmail.com>
  */
 class inviPDO extends PDO {
+    /**
+     * This variable includes object of PDOStatement class
+     * 
+     * @var object Object of PDOStatement class
+     */
     public $stmt;
+
+    /**
+    * Method for connect to database
+    * 
+    * @throws inviException In case of connection error
+    * @return void
+    */
     
-    /*
-     * Constructor redefines PDO's constructor. It simplifies work with DB in inviCMS
-     */
-    public function __construct() {
-        // Get connection data from configs
+    public function __construct()
+    {
+        // Get database server data from config
         $conn_data = config_get("database");
-        
-        // Create PDO object with data got
-        parent::__construct("mysql:host={$conn_data['server']};dbname={$conn_data['db']}", $conn_data['login'], $conn_data['password']);
-        
-        // Set encode to utf8. Needed to fix troubles with encode in articles, comments etc.
-        $this->query("SET NAMES utf8");
-    }
-    
-    /*
-     * Method for prepare and execute query
-     * It requires query to execute
-     * Parameter $data is not nessesary, it's required only in case of holders in query given
-     */
-    public function query( $query, $data = array() )
-    {
-        try {
-            $this->stmt = $this->prepare($query);
-            $this->stmt->execute( (array)$data );
-        } catch ( PDOException $e ) {
+
+        try { // Try to connect
+            parent::__construct("mysql:host={$conn_data['server']};dbname={$conn_data['db']};charset=utf8", $conn_data['login'], $conn_data['password']);
+        } catch ( PDOException $e ) { // If there's any errors, throw exception
             throw new inviException( (int)$e->getCode(), $e->getMessage() );
         }
-        return TRUE;
+
+        // Errors will throw exceptions
+        $this->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_SILENT);
     }
     
-    /*
-     * Method for getting returned data if any
+    /**
+     * Method executes query given with data if any.
+     * 
+     * @param type $query
+     * @param type $data
+     * @throws inviException In case of MySQL error
      */
-    public function fetch( $mode = "assoc")
+    public function query($query, $data = array())
     {
-        try {
-            // Set fetch mode
-            switch ($mode)
-            {
-                case "assoc":
-                    $this->stmt->setFetchMode(PDO::FETCH_ASSOC);
-                    break;
-                case "num":
-                    $this->stmt->setFetchMode(PDO::FETCH_NUM);
-                    break;
-                default:
-                    throw new inviException(1, "Unknown fetch mode");
-            }
-            
-            // If there's nothing returned, return NULL
-            if ( $this->stmt->rowCount() < 1 )
-            {
-                return NULL;
-            }
-            
-            // Fetch all entries into multi-dimensional array
-            $data = array();
-            while ( $row = $this->stmt->fetch() )
-            {
-                $data[] = $row;
-            }
-            
-            // Return full array
-            return $data;
-        } catch ( PDOException $e ) {
-            throw new inviException( (int)$e->getCode(), $e->getMessage() );
+        // Prepare query
+        $this->stmt = $this->prepare($query);
+        
+        // Execute statement with data given
+        $this->stmt->execute((array)$data);
+        
+        // Check for errors. If any, throw inviException
+        if ( $this->stmt->errorCode() != "00000" )
+        {
+            $error = $this->stmt->errorInfo();
+            throw new inviException( $error[0], $error[2] );
         }
+    }
+
+    /**
+     * Method fetch is required for getting data returned by server
+     * 
+     * @param string $fetch_mode Should be assoc or num. If unknown mode given, will be fetched assoc
+     * @return array Multi-dimensional array with data returned or NULL
+     */
+    public function fetch($fetch_mode = "assoc")
+    {
+        // Set fetch mode, default is assoc.
+        switch ($fetch_mode)
+        {
+            case "num":
+                $this->stmt->setFetchMode(PDO::FETCH_NUM);
+                break;
+            case "assoc":
+            default:
+                $this->stmt->setFetchMode(PDO::FETCH_ASSOC);
+        }
+        
+        // If nothing is returned, throw exception
+        if ($this->stmt->rowCount() == 0)
+        {
+            return NULL;
+        }
+        
+        // Fetch $data array with rows
+        $data = array();
+        while ($row = $this->stmt->fetch())
+        {
+            $data[] = $row;
+        }
+        return $data;
     }
 }
 
@@ -613,7 +630,7 @@ class User
         // Check login given for existing
         if ( self::isRegistered($email) )
         {
-            throw new inviException(1, "This login is already registered");
+            throw new inviException(1, "This email is already registered");
         }
         
         // Check nickname given for existing
@@ -633,10 +650,6 @@ class User
             'nickname' => $nickname
         );
         $result = $DBH->query("INSERT INTO `users` (`email`, `password`, `nickname`) VALUES (:email, :password, :nickname)", $stmtParams );
-        if ( ! $result )
-        {
-            throw new inviException(3, "MySQL error: {$DBH->stmt->errorInfo()}");
-        }
         
         // Now authorize user
         self::authorize();
@@ -690,8 +703,10 @@ class User
      */
     public static function get($login = NULL)
     {
+        @session_start();
+        
         // If $login isn't given, return data of current user
-        if ( $login == NULL )
+        if ( $login == NULL && isset($_SESSION['id']) )
         {
             $return = array(
                 'id' => $_SESSION['id'],
@@ -701,6 +716,8 @@ class User
                 'blocked_until' => $_SESSION['blocked_until']
             );
             return $return;
+        } else {
+            return false;
         }
         
         // Connect to DB
@@ -784,6 +801,44 @@ class User
             return TRUE;
         }
     }
+    
+    public static function check($what)
+    {
+        switch ($what)
+        {
+            case "email":
+                DB::$DBH->query( "SELECT `email` FROM `users` WHERE `email` = :email", array( 'email' => $_POST['email'] ) );
+                if ( DB::$DBH->stmt->rowCount() < 1 )
+                {
+                    return TRUE;
+                } else {
+                    return FALSE;
+                }
+                break;
+            case "nickname":
+                DB::$DBH->query( "SELECT `nickname` FROM `users` WHERE `nickname` = :nickname", array( 'nickname' => $_POST['nickname'] ) );
+                if ( DB::$DBH->stmt->rowCount() < 1 )
+                {
+                    return TRUE;
+                } else {
+                    return FALSE;
+                }
+                break;
+        }
+    }
+    
+    public static function authorized()
+    {
+        @session_start();
+        
+        if ( isset($_SESSION['authorized']) && $_SESSION['authorized'] == TRUE )
+        {
+            return TRUE;
+        } else {
+            return FALSE;
+        }
+    }
+    
     /*
      * Method is required for registering user and changing user's email
      */
@@ -793,112 +848,46 @@ class User
     }
 }
 
-/*
- * I took this class from http://stackoverflow.com/questions/4795385/how-do-you-use-bcrypt-for-hashing-passwords-in-php . Meybe I will comment it in time, but not now...
- */
-class Bcrypt {
-  private $rounds;
-  public function __construct($rounds = 12) {
-    if(CRYPT_BLOWFISH != 1) {
-      throw new Exception("bcrypt not supported in this installation. See http://php.net/crypt");
-    }
-
-    $this->rounds = $rounds;
-  }
-
-  public function hash($input) {
-    $hash = crypt($input, $this->getSalt());
-
-    if(strlen($hash) > 13)
-      return $hash;
-
-    return false;
-  }
-
-  public function verify($input, $existingHash) {
-    $hash = crypt($input, $existingHash);
-
-    return $hash === $existingHash;
-  }
-
-  private function getSalt() {
-    $salt = sprintf('$2a$%02d$', $this->rounds);
-
-    $bytes = $this->getRandomBytes(16);
-
-    $salt .= $this->encodeBytes($bytes);
-
-    return $salt;
-  }
-
-  private $randomState;
-  private function getRandomBytes($count) {
-    $bytes = '';
-
-    if(function_exists('openssl_random_pseudo_bytes') &&
-        (strtoupper(substr(PHP_OS, 0, 3)) !== 'WIN')) { // OpenSSL slow on Win
-      $bytes = openssl_random_pseudo_bytes($count);
-    }
-
-    if($bytes === '' && is_readable('/dev/urandom') &&
-       ($hRand = @fopen('/dev/urandom', 'rb')) !== FALSE) {
-      $bytes = fread($hRand, $count);
-      fclose($hRand);
-    }
-
-    if(strlen($bytes) < $count) {
-      $bytes = '';
-
-      if($this->randomState === null) {
-        $this->randomState = microtime();
-        if(function_exists('getmypid')) {
-          $this->randomState .= getmypid();
-        }
-      }
-
-      for($i = 0; $i < $count; $i += 16) {
-        $this->randomState = md5(microtime() . $this->randomState);
-
-        if (PHP_VERSION >= '5') {
-          $bytes .= md5($this->randomState, true);
+class System {
+    public static function out($title, $content)
+    {
+        $page = "";
+        
+        $templater = new inviTemplater("styles".DS."templates");
+        $templater->load("header");
+        
+        $siteData = config_get("site_data");
+        
+        if ( User::authorized() )
+        {
+            $authed = "true";
         } else {
-          $bytes .= pack('H*', md5($this->randomState));
+            $authed = "false";
         }
-      }
-
-      $bytes = substr($bytes, 0, $count);
+        
+        $params = array(
+            'title' => $title,
+            'site_name' => $siteData['name'],
+            'site_desc' => $siteData['description'],
+            'authed' => $authed
+        );
+        
+        $page .= $templater->parse( $params );
+        
+        $templater->load("content");
+        $page .= $templater->parse( array( 'content' => $content ) );
+        
+        $templater->load("categories");
+        $params = array(
+            'list1' => Categories::get(1),
+            'list2' => Categories::get(2)
+        );
+        $page .= $templater->parse( $params );
+        
+        $templater->load("footer");
+        $page .= $templater->parse(array());
+        
+        print($page);
     }
-
-    return $bytes;
-  }
-
-  private function encodeBytes($input) {
-    // The following is code from the PHP Password Hashing Framework
-    $itoa64 = './ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
-
-    $output = '';
-    $i = 0;
-    do {
-      $c1 = ord($input[$i++]);
-      $output .= $itoa64[$c1 >> 2];
-      $c1 = ($c1 & 0x03) << 4;
-      if ($i >= 16) {
-        $output .= $itoa64[$c1];
-        break;
-      }
-
-      $c2 = ord($input[$i++]);
-      $c1 |= $c2 >> 4;
-      $output .= $itoa64[$c1];
-      $c1 = ($c2 & 0x0f) << 2;
-
-      $c2 = ord($input[$i++]);
-      $c1 |= $c2 >> 6;
-      $output .= $itoa64[$c1];
-      $output .= $itoa64[$c2 & 0x3f];
-    } while (1);
-
-    return $output;
-  }
 }
 ?>

@@ -10,8 +10,6 @@ jQuery.fn.setHints = function()
 			case $(this).attr("title"):
 				$(this).val("");
 				break;
-			default:
-				break;
 		}
 	});
 };

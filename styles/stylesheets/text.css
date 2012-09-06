@@ -1,0 +1,40 @@
+div.text h1,
+div.text h2,
+div.text h3,
+div.text p {
+    text-indent: 20px;
+}
+
+div.text h1,
+div.text h2,
+div.text h3 {
+    color: #5950e3;
+}
+
+div.text h1 {
+    font-size: 30pt;
+}
+
+div.text h2 {
+    font-size: 20pt;
+}
+
+div.text h3 {
+    font-size: 15pt;
+}
+
+div.text p {
+    font-size: 12pt;
+    line-height: 16pt;
+    margin-left: 0;
+    padding-left: 0;
+}
+
+div.text span.date {
+    font-size: 11pt;
+}
+
+div.text a.more {
+    display: inline-block;
+    padding-bottom: 10px;
+}
